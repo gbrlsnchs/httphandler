@@ -9,11 +9,11 @@ import (
 
 func Example(err error) {
 	type myResponse struct {
-		XMLName xml.Name `json:"-" xml:"myResponse"`
-		Msg     string   `json:"message" xml:"message"`
+		XMLName xml.Name `json:"-" msgpack:"-" xml:"myResponse"`
+		Msg     string   `json:"message" msgpack:"message" xml:"message"`
 	}
 
-	h := httphandler.New(http.StatusOK, func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	h := httphandler.New(func(w http.ResponseWriter, r *http.Request) (httphandler.Responder, error) {
 		// ...
 		if err != nil {
 			// httphandler.NewError is used here,
@@ -22,30 +22,21 @@ func Example(err error) {
 			return nil, httphandler.NewError(http.StatusBadRequest, "Oops!")
 		}
 
-		return &myResponse{Msg: "Hello World"}, nil
-	})
-
-	c := h.Clone()
-
-	http.Handle("/json", h.JSON())
-	http.Handle("/xml", c.XML())
-}
-
-func ExampleWrite(w http.ResponseWriter, myResponse interface{}, err error) {
-	if err != nil {
-		e := httphandler.NewError(http.StatusBadRequest, err.Error())
-		err = httphandler.Write(w, e.Status(), e)
-
-		if err != nil {
-			httphandler.Panic(w)
+		res := &myResponse{
+			Msg: "foobar",
 		}
 
-		return
-	}
+		// The httphandler.NewResponder wrapper can be used as much as
+		// a struct/interface that implements the Responder interface as a return value.
+		return httphandler.NewResponder(res, http.StatusOK), nil
+	})
 
-	err = httphandler.Write(w, http.StatusOK, myResponse)
+	j := h.Clone()
+	m := h.Clone()
+	x := h.Clone()
 
-	if err != nil {
-		httphandler.Panic(w)
-	}
+	http.Handle("/plain", h)
+	http.Handle("/json", j.SetJSON())
+	http.Handle("/msg-pack", m.SetMsgPack())
+	http.Handle("/xml", x.SetXML())
 }
