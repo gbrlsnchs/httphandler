@@ -2,23 +2,22 @@ package httphandler
 
 import "encoding/xml"
 
-// Error is a custom error that is sent as a response by the Write function.
+// Error is the error returned by a Handler.
 type Error interface {
 	error
-	// Status prints the Error's status code.
+	// Status returns the Error's HTTP status.
 	Status() int
 }
 
-// httpErr is the default struct used by this package for
-// error responses.
+// httpErr is a helper that creates an Error
+// with JSON, MsgPack and XML support.
 type httpErr struct {
-	XMLName xml.Name `json:"-" xml:"error"`
-	Code    int      `json:"code,omitempty" xml:"code,omitempty"`
-	Msg     string   `json:"message,omitempty xml:"message,omitempty`
+	XMLName xml.Name `json:"-" msgpack:"-" xml:"error"`
+	Code    int      `json:"code,omitempty" msgpack:"code,omitempty" xml:"code,omitempty"`
+	Msg     string   `json:"message,omitempty msgpack:"message,omitempty" xml:"message,omitempty`
 }
 
-// NewError creates a new custom error that gets caught
-// by the Handler if returned by its handling function.
+// NewError creates an Error with a status code and a friendly message.
 func NewError(code int, msg string) Error {
 	return &httpErr{Code: code, Msg: msg}
 }
