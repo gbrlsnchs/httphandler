@@ -2,26 +2,26 @@ package httphandler
 
 // Responder is the value returned by a Handler.
 type Responder interface {
-	// Content returns an interface to be read by a Handler.
-	Content() interface{}
+	// Body returns an interface to be read by a Handler.
+	Body() interface{}
 	// Status returns the status read by a Handler.
 	Status() int
 }
 
 // responder is a helping wrapper.
 type responder struct {
-	content interface{}
-	code    int
+	body interface{}
+	code int
 }
 
 // NewResponder returns a wrapper to be used in a Handler.
-func NewResponder(content interface{}, code int) Responder {
-	return &responder{content: content, code: code}
+func NewResponder(b interface{}, c int) Responder {
+	return &responder{body: b, code: c}
 }
 
 // Content returns the wrapper's content.
-func (r *responder) Content() interface{} {
-	return r.content
+func (r *responder) Body() interface{} {
+	return r.body
 }
 
 // Status returns the wrapper's status.
