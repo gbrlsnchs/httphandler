@@ -36,7 +36,7 @@ func Example(err error) {
 	x := h.Clone()
 
 	http.Handle("/plain", h)
-	http.Handle("/json", j.SetJSON())
-	http.Handle("/msg-pack", m.SetMsgPack())
-	http.Handle("/xml", x.SetXML())
+	http.Handle("/json", j.WithContentType(httphandler.ContentTypeJSON))
+	http.Handle("/msg-pack", m.WithContentType(httphandler.ContentTypeMsgPack))
+	http.Handle("/xml", x.WithContentType(httphandler.ContentTypeXML))
 }

@@ -19,7 +19,10 @@ import (
 func TestClone(t *testing.T) {
 	handlerFunc := func(w http.ResponseWriter, r *http.Request) (Responder, error) { return nil, nil }
 	loggerFunc := func(err error, reqURI string) {}
-	h := New(handlerFunc).SetLoggerFunc(loggerFunc)
+	h := New(handlerFunc)
+
+	h.SetLoggerFunc(loggerFunc)
+
 	hClone := h.Clone()
 	a := assert.New(t)
 
@@ -34,7 +37,7 @@ func TestNew(t *testing.T) {
 
 	a := assert.New(t)
 	tests := []*struct {
-		contentType    string
+		ctype          ContentType
 		status         int
 		response       *res
 		err            error
@@ -43,7 +46,7 @@ func TestNew(t *testing.T) {
 	}{
 		// #0
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -52,7 +55,7 @@ func TestNew(t *testing.T) {
 		},
 		// #1
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            NewError(http.StatusBadRequest, "test"),
@@ -61,7 +64,7 @@ func TestNew(t *testing.T) {
 		},
 		// #2
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            errors.New("test"),
@@ -70,7 +73,7 @@ func TestNew(t *testing.T) {
 		},
 		// #3
 		{
-			contentType:    ContentTypeJSON,
+			ctype:          ContentTypeJSON,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -79,7 +82,7 @@ func TestNew(t *testing.T) {
 		},
 		// #4
 		{
-			contentType:    ContentTypeJSON,
+			ctype:          ContentTypeJSON,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            NewError(http.StatusBadRequest, "test"),
@@ -88,7 +91,7 @@ func TestNew(t *testing.T) {
 		},
 		// #5
 		{
-			contentType:    ContentTypeJSON,
+			ctype:          ContentTypeJSON,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            errors.New("test"),
@@ -97,7 +100,7 @@ func TestNew(t *testing.T) {
 		},
 		// #6
 		{
-			contentType:    ContentTypeXML,
+			ctype:          ContentTypeXML,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -106,7 +109,7 @@ func TestNew(t *testing.T) {
 		},
 		// #7
 		{
-			contentType:    ContentTypeXML,
+			ctype:          ContentTypeXML,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            NewError(http.StatusBadRequest, "test"),
@@ -115,7 +118,7 @@ func TestNew(t *testing.T) {
 		},
 		// #8
 		{
-			contentType:    ContentTypeXML,
+			ctype:          ContentTypeXML,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            errors.New("test"),
@@ -124,7 +127,7 @@ func TestNew(t *testing.T) {
 		},
 		// #9
 		{
-			contentType:    ContentTypeMsgPack,
+			ctype:          ContentTypeMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -133,7 +136,7 @@ func TestNew(t *testing.T) {
 		},
 		// #10
 		{
-			contentType:    ContentTypeMsgPack,
+			ctype:          ContentTypeMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            NewError(http.StatusBadRequest, "test"),
@@ -142,7 +145,7 @@ func TestNew(t *testing.T) {
 		},
 		// #11
 		{
-			contentType:    ContentTypeMsgPack,
+			ctype:          ContentTypeMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            errors.New("test"),
@@ -151,7 +154,7 @@ func TestNew(t *testing.T) {
 		},
 		// #12
 		{
-			contentType:    ContentTypeXMsgPack,
+			ctype:          ContentTypeXMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -160,7 +163,7 @@ func TestNew(t *testing.T) {
 		},
 		// #13
 		{
-			contentType:    ContentTypeXMsgPack,
+			ctype:          ContentTypeXMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            NewError(http.StatusBadRequest, "test"),
@@ -169,7 +172,7 @@ func TestNew(t *testing.T) {
 		},
 		// #14
 		{
-			contentType:    ContentTypeXMsgPack,
+			ctype:          ContentTypeXMsgPack,
 			status:         http.StatusOK,
 			response:       &res{Message: "test"},
 			err:            errors.New("test"),
@@ -178,7 +181,7 @@ func TestNew(t *testing.T) {
 		},
 		// #15
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusSwitchingProtocols,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -187,7 +190,7 @@ func TestNew(t *testing.T) {
 		},
 		// #16
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusProcessing,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -196,7 +199,7 @@ func TestNew(t *testing.T) {
 		},
 		// #17
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusCreated,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -205,7 +208,7 @@ func TestNew(t *testing.T) {
 		},
 		// #18
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusNoContent,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -214,7 +217,7 @@ func TestNew(t *testing.T) {
 		},
 		// #19
 		{
-			contentType:    ContentTypeTextPlain,
+			ctype:          ContentTypeTextPlain,
 			status:         http.StatusResetContent,
 			response:       &res{Message: "test"},
 			err:            nil,
@@ -226,22 +229,7 @@ func TestNew(t *testing.T) {
 	for i, test := range tests {
 		h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 			return NewResponder(test.response, test.status), test.err
-		})
-
-		switch test.contentType {
-		case ContentTypeJSON:
-			_ = h.SetJSON()
-
-		case ContentTypeMsgPack:
-			_ = h.SetMsgPack()
-
-		case ContentTypeXMsgPack:
-			_ = h.SetXMsgPack()
-
-		case ContentTypeXML:
-			_ = h.SetXML()
-		}
-
+		}).WithContentType(test.ctype)
 		srv := httptest.NewServer(h)
 
 		defer srv.Close()
@@ -250,6 +238,7 @@ func TestNew(t *testing.T) {
 		index := strconv.Itoa(i)
 
 		a.Nil(err, index)
+		a.IsType(ContentType(""), test.ctype, index)
 
 		body, err := ioutil.ReadAll(w.Body)
 
@@ -258,7 +247,7 @@ func TestNew(t *testing.T) {
 		a.Nil(err, index)
 		a.Exactly(test.expectedStatus, w.StatusCode, index)
 
-		if test.contentType == ContentTypeTextPlain {
+		if test.ctype == ContentTypeTextPlain {
 			if test.expected == nil {
 				a.Exactly("", string(body), index)
 
@@ -271,11 +260,11 @@ func TestNew(t *testing.T) {
 		}
 
 		expected, err := func() ([]byte, error) {
-			if test.contentType == ContentTypeJSON {
+			if test.ctype == ContentTypeJSON {
 				return json.Marshal(test.expected)
 			}
 
-			if test.contentType == ContentTypeXML {
+			if test.ctype == ContentTypeXML {
 				return xml.Marshal(test.expected)
 			}
 
