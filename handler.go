@@ -1,6 +1,13 @@
 package httphandler
 
-import "net/http"
+import (
+	"encoding/json"
+	"encoding/xml"
+	"fmt"
+	"net/http"
+
+	"github.com/vmihailenco/msgpack"
+)
 
 // HandlerFunc is the accepted function to use in a Handler.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) (Responder, error)
@@ -10,47 +17,30 @@ type LoggerFunc func(err error, reqURI string)
 
 // Handler is an HTTP handler that implements http.Handler.
 type Handler struct {
-	handlerFunc HandlerFunc
-	header      http.Header
-	loggerFunc  LoggerFunc
-	errCode     int
-	errMsg      string
+	hfunc   HandlerFunc
+	lfunc   LoggerFunc
+	errCode int
+	errMsg  string
+	ctype   ContentType
 }
 
 // New creates a new Handler.
-func New(handlerFunc HandlerFunc) *Handler {
-	h := make(http.Header)
-
-	h.Set(ContentType, ContentTypeTextPlain)
-
-	internalErr := http.StatusInternalServerError
-
+func New(hfunc HandlerFunc) *Handler {
 	return &Handler{
-		handlerFunc: handlerFunc,
-		header:      h,
-		errCode:     internalErr,
-		errMsg:      http.StatusText(internalErr),
+		hfunc:   hfunc,
+		errCode: http.StatusInternalServerError,
+		errMsg:  http.StatusText(http.StatusInternalServerError),
+		ctype:   ContentTypeTextPlain,
 	}
 }
 
 // Clone deeply copies the caller Handler and returns the clone.
 func (h *Handler) Clone() *Handler {
-	clone := &Handler{
-		handlerFunc: h.handlerFunc,
-		loggerFunc:  h.loggerFunc,
-		header:      make(http.Header),
+	return &Handler{
+		hfunc: h.hfunc,
+		lfunc: h.lfunc,
+		ctype: h.ctype,
 	}
-
-	for k, v := range h.header {
-		clone.header[k] = v
-	}
-
-	return clone
-}
-
-// Header returns the Handler's http.Header.
-func (h *Handler) Header() http.Header {
-	return h.header
 }
 
 // ServeHTTP runs the custom handler function and catches its
@@ -59,26 +49,22 @@ func (h *Handler) Header() http.Header {
 // If the caught error implements Error, it is sent as a response
 // serialized according to the "Content-Type" header.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if h.handlerFunc == nil {
+	if h.hfunc == nil {
 		http.NotFound(w, r)
 
 		return
 	}
 
-	for key := range h.header {
-		w.Header().Set(key, h.header.Get(key))
-	}
-
-	res, err := h.handlerFunc(w, r)
+	res, err := h.hfunc(w, r)
 
 	if err != nil {
-		if h.loggerFunc != nil {
-			go h.loggerFunc(err, r.RequestURI)
+		if h.lfunc != nil {
+			go h.lfunc(err, r.RequestURI)
 		}
 
 		switch e := err.(type) {
 		case Error:
-			err = write(w, e, e.Status())
+			err = h.write(w, e, e.Status())
 
 			if err != nil {
 				http.Error(w, h.errMsg, h.errCode)
@@ -86,7 +72,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		default:
 			errWrapper := NewError(h.errCode, h.errMsg)
-			err = write(w, errWrapper, errWrapper.Status())
+			err = h.write(w, errWrapper, errWrapper.Status())
 
 			if err != nil {
 				http.Error(w, h.errMsg, h.errCode)
@@ -107,10 +93,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fallthrough
 
 	case http.StatusNoContent:
-		err = write(w, nil, res.Status())
+		err = h.write(w, nil, res.Status())
 
 	default:
-		err = write(w, res.Content(), res.Status())
+		err = h.write(w, res.Body(), res.Status())
 	}
 
 	if err != nil {
@@ -120,51 +106,74 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // SetErrCode sets the default Handler's error status code.
 // If none is set, the default is http.StatusInternalServerError.
-func (h *Handler) SetErrCode(c int) *Handler {
+func (h *Handler) SetErrCode(c int) {
 	h.errCode = c
-
-	return h
 }
 
 // SetErrMsg sets the default Handler's error message.
 // If none is set, the default is http.StatusText(http.StatusInternalServerError).
-func (h *Handler) SetErrMsg(m string) *Handler {
+func (h *Handler) SetErrMsg(m string) {
 	h.errMsg = m
-
-	return h
-}
-
-// SetJSON sets the "Content-Type" header as "application/json".
-func (h *Handler) SetJSON() *Handler {
-	h.header.Set(ContentType, ContentTypeJSON)
-
-	return h
 }
 
 // SetLoggerFunc sets a function for logging a caught error.
-func (h *Handler) SetLoggerFunc(loggerFunc LoggerFunc) *Handler {
-	h.loggerFunc = loggerFunc
+func (h *Handler) SetLoggerFunc(lfunc LoggerFunc) {
+	h.lfunc = lfunc
+}
+
+// WithContentType returns the Handler instance
+// with a "Content-Type" value already set.
+func (h *Handler) WithContentType(ctype ContentType) *Handler {
+	h.ctype = ctype
 
 	return h
 }
 
-// SetMsgPack sets the "Content-Type" header as "application/vnd.msgpack".
-func (h *Handler) SetMsgPack() *Handler {
-	h.header.Set(ContentType, ContentTypeMsgPack)
+// write writes the response according to the status code and the
+// "Content-Type" header set in the response's header.
+func (h *Handler) write(w http.ResponseWriter, r interface{}, c int) error {
+	w.Header().Set(ContentTypeHeader, string(h.ctype))
+	w.WriteHeader(c)
 
-	return h
-}
+	if r == nil {
+		return nil
+	}
 
-// SetXMsgPack sets the "Content-Type" header as "application/x-msgpack".
-func (h *Handler) SetXMsgPack() *Handler {
-	h.header.Set(ContentType, ContentTypeXMsgPack)
+	var b []byte
+	var err error
 
-	return h
-}
+	switch h.ctype {
+	case ContentTypeJSON:
+		b, err = json.Marshal(r)
 
-// SetXML sets the "Content-Type" header as "application/xml".
-func (h *Handler) SetXML() *Handler {
-	h.header.Set(ContentType, ContentTypeXML)
+	case ContentTypeMsgPack:
+		fallthrough
+	case ContentTypeXMsgPack:
+		b, err = msgpack.Marshal(r)
 
-	return h
+	case ContentTypeXML:
+		b, err = xml.Marshal(r)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if h.ctype != ContentTypeTextPlain {
+		_, err = w.Write(b)
+
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	_, err = fmt.Fprint(w, r)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
