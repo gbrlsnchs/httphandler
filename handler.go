@@ -82,6 +82,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if res == nil {
+		err = h.write(w, nil, http.StatusOK)
+
+		goto checkErr
+	}
+
 	switch res.Status() {
 	case http.StatusContinue:
 		fallthrough
@@ -99,6 +105,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = h.write(w, res.Body(), res.Status())
 	}
 
+checkErr:
 	if err != nil {
 		http.Error(w, h.errMsg, h.errCode)
 	}
