@@ -9,6 +9,10 @@ import (
 	"github.com/vmihailenco/msgpack"
 )
 
+// DefaultContentType is the default Content-Type MIME
+// type handlers use when they are created.
+var DefaultContentType = ContentTypeTextPlain
+
 // HandlerFunc is the accepted function to use in a Handler.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) (Responder, error)
 
@@ -30,7 +34,7 @@ func New(hfunc HandlerFunc) *Handler {
 		hfunc:   hfunc,
 		errCode: http.StatusInternalServerError,
 		errMsg:  http.StatusText(http.StatusInternalServerError),
-		ctype:   ContentTypeTextPlain,
+		ctype:   DefaultContentType,
 	}
 }
 
