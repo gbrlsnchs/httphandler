@@ -14,7 +14,7 @@ type Error interface {
 type httpErr struct {
 	XMLName xml.Name `json:"-" msgpack:"-" xml:"error"`
 	Code    int      `json:"code,omitempty" msgpack:"code,omitempty" xml:"code,omitempty"`
-	Msg     string   `json:"message,omitempty msgpack:"message,omitempty" xml:"message,omitempty`
+	Msg     string   `json:"message,omitempty" msgpack:"message,omitempty" xml:"message,omitempty"`
 }
 
 // NewError creates an Error with a status code and a friendly message.
