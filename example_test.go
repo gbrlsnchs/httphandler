@@ -1,42 +1,20 @@
 package httphandler_test
 
 import (
-	"encoding/xml"
 	"net/http"
 
 	"github.com/gbrlsnchs/httphandler"
 )
 
-func Example(err error) {
-	type myResponse struct {
-		XMLName xml.Name `json:"-" msgpack:"-" xml:"myResponse"`
-		Msg     string   `json:"message" msgpack:"message" xml:"message"`
-	}
-
-	h := httphandler.New(func(w http.ResponseWriter, r *http.Request) (httphandler.Responder, error) {
-		// ...
-		if err != nil {
-			// httphandler.NewError is used here,
-			// but anything that implements the
-			// httphandler.Error interface will be sent as a response
-			return nil, httphandler.NewError(http.StatusBadRequest, "Oops!")
-		}
-
-		res := &myResponse{
-			Msg: "foobar",
-		}
-
-		// The httphandler.NewResponder wrapper can be used as much as
-		// a struct/interface that implements the Responder interface as a return value.
-		return httphandler.NewResponder(res, http.StatusOK), nil
+func Example() {
+	h := httphandler.New(func(w http.ResponseWriter, _ *http.Request) (*httphandler.Response, error) {
+		return &httphandler.Response{
+			Body: struct {
+				Msg string `json:"message"`
+			}{"Hello, World!"},
+			Code: http.StatusOK,
+		}, nil
 	})
 
-	j := h.Clone()
-	m := h.Clone()
-	x := h.Clone()
-
-	http.Handle("/plain", h)
-	http.Handle("/json", j.WithContentType(httphandler.ContentTypeJSON))
-	http.Handle("/msg-pack", m.WithContentType(httphandler.ContentTypeMsgPack))
-	http.Handle("/xml", x.WithContentType(httphandler.ContentTypeXML))
+	http.Handle("/example", h)
 }

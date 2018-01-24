@@ -1,280 +1,164 @@
 package httphandler_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	. "github.com/gbrlsnchs/httphandler"
-	"github.com/stretchr/testify/assert"
-	"github.com/vmihailenco/msgpack"
 )
 
-func TestClone(t *testing.T) {
-	handlerFunc := func(w http.ResponseWriter, r *http.Request) (Responder, error) { return nil, nil }
-	loggerFunc := func(err error, reqURI string) {}
-	h := New(handlerFunc)
+func TestHandlerJSONResponse(t *testing.T) {
+	response := &Response{Body: &responseMockup{Msg: "test"}, Code: http.StatusOK}
+	expectedResponse, err := json.Marshal(response.Body)
+	expectedCode := response.Code
 
-	h.SetLoggerFunc(loggerFunc)
+	if err != nil {
+		t.Errorf("%v\n", err)
+	}
 
-	hClone := h.Clone()
-	a := assert.New(t)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return response, nil
+	})
 
-	a.NotEqual(h, hClone)
+	h.ServeHTTP(w, r)
+
+	body := w.Body.Bytes()
+	code := w.Code
+
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
+	}
+
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+	}
 }
 
-func TestNew(t *testing.T) {
-	type res struct {
-		XMLName xml.Name `json:"-" msgpack:"-" xml:"test"`
-		Message string   `json:"message" msgpack:"message" xml:"message"`
+func TestHandlerJSONResponseWithError(t *testing.T) {
+	responseErr := &errorMockup{Msg: "Oops!", Code: http.StatusBadRequest}
+	expectedResponse, err := json.Marshal(responseErr)
+	expectedCode := responseErr.Code
+
+	if err != nil {
+		t.Errorf("%v\n", err)
 	}
 
-	a := assert.New(t)
-	tests := []*struct {
-		ctype          ContentType
-		status         int
-		response       *res
-		err            error
-		expected       interface{}
-		expectedStatus int
-	}{
-		// #0
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusOK,
-		},
-		// #1
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            NewError(http.StatusBadRequest, "test"),
-			expected:       NewError(http.StatusBadRequest, "test"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		// #2
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            errors.New("test"),
-			expected:       NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		// #3
-		{
-			ctype:          ContentTypeJSON,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusOK,
-		},
-		// #4
-		{
-			ctype:          ContentTypeJSON,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            NewError(http.StatusBadRequest, "test"),
-			expected:       NewError(http.StatusBadRequest, "test"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		// #5
-		{
-			ctype:          ContentTypeJSON,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            errors.New("test"),
-			expected:       NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		// #6
-		{
-			ctype:          ContentTypeXML,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusOK,
-		},
-		// #7
-		{
-			ctype:          ContentTypeXML,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            NewError(http.StatusBadRequest, "test"),
-			expected:       NewError(http.StatusBadRequest, "test"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		// #8
-		{
-			ctype:          ContentTypeXML,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            errors.New("test"),
-			expected:       NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		// #9
-		{
-			ctype:          ContentTypeMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusOK,
-		},
-		// #10
-		{
-			ctype:          ContentTypeMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            NewError(http.StatusBadRequest, "test"),
-			expected:       NewError(http.StatusBadRequest, "test"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		// #11
-		{
-			ctype:          ContentTypeMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            errors.New("test"),
-			expected:       NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		// #12
-		{
-			ctype:          ContentTypeXMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusOK,
-		},
-		// #13
-		{
-			ctype:          ContentTypeXMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            NewError(http.StatusBadRequest, "test"),
-			expected:       NewError(http.StatusBadRequest, "test"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		// #14
-		{
-			ctype:          ContentTypeXMsgPack,
-			status:         http.StatusOK,
-			response:       &res{Message: "test"},
-			err:            errors.New("test"),
-			expected:       NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError)),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		// #15
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusSwitchingProtocols,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       nil,
-			expectedStatus: http.StatusSwitchingProtocols,
-		},
-		// #16
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusProcessing,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       nil,
-			expectedStatus: http.StatusProcessing,
-		},
-		// #17
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusCreated,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusCreated,
-		},
-		// #18
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusNoContent,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       nil,
-			expectedStatus: http.StatusNoContent,
-		},
-		// #19
-		{
-			ctype:          ContentTypeTextPlain,
-			status:         http.StatusResetContent,
-			response:       &res{Message: "test"},
-			err:            nil,
-			expected:       &res{Message: "test"},
-			expectedStatus: http.StatusResetContent,
-		},
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return nil, responseErr
+	})
+
+	h.ServeHTTP(w, r)
+
+	body := w.Body.Bytes()
+	code := w.Code
+
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
 	}
 
-	for i, test := range tests {
-		h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-			return NewResponder(test.response, test.status), test.err
-		}).WithContentType(test.ctype)
-		srv := httptest.NewServer(h)
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+	}
+}
 
-		defer srv.Close()
+func TestHandlerXMLResponse(t *testing.T) {
+	response := &Response{Body: &responseMockup{Msg: "test"}, Code: http.StatusOK}
+	expectedResponse, err := xml.Marshal(response.Body)
+	expectedCode := response.Code
 
-		w, err := http.Get(srv.URL)
-		index := strconv.Itoa(i)
+	if err != nil {
+		t.Errorf("%v\n", err)
+	}
 
-		a.Nil(err, index)
-		a.IsType(ContentType(""), test.ctype, index)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return response, nil
+	})
+	h.MarshallerFunc = xml.Marshal
 
-		body, err := ioutil.ReadAll(w.Body)
+	h.ServeHTTP(w, r)
 
-		t.Logf("#%s body = %s\n", index, body)
+	body := w.Body.Bytes()
+	code := w.Code
 
-		a.Nil(err, index)
-		a.Exactly(test.expectedStatus, w.StatusCode, index)
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
+	}
 
-		if test.ctype == ContentTypeTextPlain {
-			if test.expected == nil {
-				a.Exactly("", string(body), index)
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+	}
+}
 
-				continue
-			}
+func TestHandlerXMLResponseWithError(t *testing.T) {
+	responseErr := &errorMockup{Msg: "Oops!", Code: http.StatusBadRequest}
+	expectedResponse, err := xml.Marshal(responseErr)
+	expectedCode := responseErr.Code
 
-			a.Exactly(fmt.Sprint(test.expected), string(body), index)
+	if err != nil {
+		t.Errorf("%v\n", err)
+	}
 
-			continue
-		}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return nil, responseErr
+	})
+	h.MarshallerFunc = xml.Marshal
 
-		expected, err := func() ([]byte, error) {
-			if test.ctype == ContentTypeJSON {
-				return json.Marshal(test.expected)
-			}
+	h.ServeHTTP(w, r)
 
-			if test.ctype == ContentTypeXML {
-				return xml.Marshal(test.expected)
-			}
+	body := w.Body.Bytes()
+	code := w.Code
 
-			return msgpack.Marshal(test.expected)
-		}()
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
+	}
 
-		a.Nil(err, index)
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+	}
+}
 
-		if test.expected != nil {
-			a.Exactly(expected, body, index)
-		}
+func TestHandlerWithoutResponse(t *testing.T) {
+	expectedCode := http.StatusNotFound
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return nil, nil
+	})
+
+	h.ServeHTTP(w, r)
+
+	code := w.Code
+
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+	}
+}
+
+func TestHandlerNoContent(t *testing.T) {
+	expectedCode := http.StatusNoContent
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return &Response{Code: http.StatusNoContent}, nil
+	})
+
+	h.ServeHTTP(w, r)
+
+	code := w.Code
+
+	if expectedCode != code {
+		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
 	}
 }
