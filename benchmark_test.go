@@ -11,8 +11,8 @@ import (
 func Benchmark(b *testing.B) {
 	b.ReportAllocs()
 
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return NewResponder(&struct{ test string }{test: "foobar"}, http.StatusOK), nil
+	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+		return &Response{Body: &struct{ test string }{test: "foobar"}, Code: http.StatusOK}, nil
 	})
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)

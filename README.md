@@ -4,7 +4,7 @@
 
 ## About
 This package is a minimalist HTTP handler for [Go] (or Golang) HTTP servers.  
-It supports JSON, MsgPack and XML responses.
+It is compatible with any response content type that has a marshaller function.
 
 ## Usage
 Full documentation [here].

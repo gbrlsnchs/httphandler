@@ -1,3 +1,3 @@
-// Package httphandler is a minimalist HTTP handler that facilitates
-// handling custom errors and sending responses.
+// Package httphandler is a minimalist HTTP handler
+// that abstracts data marshalling and handling HTTP errors.
 package httphandler

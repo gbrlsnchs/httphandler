@@ -4,25 +4,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Changed
+- `Handler` structure (marshaller functions are now pluggable).
+
+### Fixed
+- Panicking when response is `nil`
+- Some parts of the changelog were changed to use code marking.
+
+### Removed
+- MsgPack support (its marshaller function can now be plugged in).
+
 ## [0.3.1] - 2017-11-11
 ### Added
 - Benchmark flag.
 
 ### Fixed
-- goimports installation missing.
+- `goimports` installation missing.
 
 ## [0.3.0] - 2017-11-11
 ### Added
-- A writing method to the Handler.
+- A writing method to `Handler`.
 
 ### Changed
 - How Content-Type header is set.
 - Example.
-- "Content" method from Responder now is called "Body".
+- `Responder.Content` is now called `Responder.Body`.
 - Enhanced the writing function method performance.
 
 ### Removed
-- The stand-alone "write" function.
+- The stand-alone `write` function.
 
 ## [0.2.0] - 2017-10-31
 ### Added
@@ -35,7 +46,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Response header being set twice.
-- Response when handler is nil.
+- Response when handler is `nil`.
 
 ### Removed
 - Global header.
@@ -52,6 +63,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - This package's source code, including examples and tests.
 - Go dep files.
 
+[Unreleased]: https://github.com/gbrlsnchs/httphandler/compare/v0.3.1...HEAD
 [0.3.1]: https://github.com/gbrlsnchs/httphandler/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gbrlsnchs/httphandler/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gbrlsnchs/httphandler/compare/v0.1.0...v0.2.0
