@@ -83,6 +83,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", h.ContentType)
 
 	if err != nil {
+		go h.logError(r, err)
+
 		switch e := err.(type) {
 		case Error:
 			err = h.write(w, e, e.Status())
@@ -106,17 +108,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = h.write(w, response.Body, response.Code)
 
 	if err != nil {
+		go h.logError(r, err)
 		h.handleError(w, r, err)
 	}
 }
 
 func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
-	if h.LoggerFunc != nil {
-		go h.LoggerFunc(*r, err)
-	}
-
 	if h.ErrorHandlerFunc != nil {
 		h.ErrorHandlerFunc(w, r, err)
+	}
+}
+
+func (h *Handler) logError(r *http.Request, err error) {
+	if h.LoggerFunc != nil {
+		h.LoggerFunc(*r, err)
 	}
 }
 
