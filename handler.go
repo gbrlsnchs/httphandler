@@ -8,10 +8,10 @@ import (
 // HandlerFunc is the accepted function to use in a Handler.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) (Responder, error)
 
-// LoggerFunc is a function that logs an error in a request.
+// ErrorLoggerFunc is a function that logs an error in a request.
 // Since its goal is only debugging errors, it runs in a different goroutine
 // and passes a deep copy of the request as the first argument.
-type LoggerFunc func(r http.Request, err error)
+type ErrorLoggerFunc func(r http.Request, err error)
 
 // ErrorHandlerFunc is a function used to handle runtime errors.
 type ErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
@@ -24,10 +24,10 @@ var (
 	// DefaultContentType is the default Content-Type MIME
 	// type a Handler uses when it is created.
 	DefaultContentType = "application/json"
-	// DefaultLoggerFunc is the default function used
+	// DefaultErrorLoggerFunc is the default function used
 	// by a Handler when it is created to log information
 	// when an error occurs.
-	DefaultLoggerFunc LoggerFunc
+	DefaultErrorLoggerFunc ErrorLoggerFunc
 	// DefaultErrorHandlerFunc is the default function for
 	// handling runtime errors.
 	DefaultErrorHandlerFunc ErrorHandlerFunc
@@ -46,7 +46,7 @@ var (
 type Handler struct {
 	ContentType      string
 	HandlerFunc      HandlerFunc
-	LoggerFunc       LoggerFunc
+	ErrorLoggerFunc  ErrorLoggerFunc
 	ErrorHandlerFunc ErrorHandlerFunc
 	MarshallerFunc   MarshallerFunc
 	ErrMsg           string
@@ -58,7 +58,7 @@ func New(hfunc HandlerFunc) *Handler {
 	return &Handler{
 		ContentType:      DefaultContentType,
 		HandlerFunc:      hfunc,
-		LoggerFunc:       DefaultLoggerFunc,
+		ErrorLoggerFunc:  DefaultErrorLoggerFunc,
 		ErrorHandlerFunc: DefaultErrorHandlerFunc,
 		MarshallerFunc:   DefaultMarshallerFunc,
 		ErrCode:          DefaultErrCode,
@@ -120,8 +120,8 @@ func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error)
 }
 
 func (h *Handler) logError(r *http.Request, err error) {
-	if h.LoggerFunc != nil {
-		h.LoggerFunc(*r, err)
+	if h.ErrorLoggerFunc != nil {
+		h.ErrorLoggerFunc(*r, err)
 	}
 }
 
