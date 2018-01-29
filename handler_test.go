@@ -12,9 +12,9 @@ import (
 )
 
 func TestHandlerJSONResponse(t *testing.T) {
-	response := &Response{Body: &responseMockup{Msg: "test"}, Code: http.StatusOK}
-	expectedResponse, err := json.Marshal(response.Body)
-	expectedCode := response.Code
+	response := &responderMockup{msg: "test", code: http.StatusOK}
+	expectedResponse, err := json.Marshal(response.Body())
+	expectedCode := response.Status()
 
 	if err != nil {
 		t.Errorf("%v\n", err)
@@ -22,7 +22,7 @@ func TestHandlerJSONResponse(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 		return response, nil
 	})
 
@@ -51,7 +51,7 @@ func TestHandlerJSONResponseWithError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 		return nil, responseErr
 	})
 
@@ -70,9 +70,9 @@ func TestHandlerJSONResponseWithError(t *testing.T) {
 }
 
 func TestHandlerXMLResponse(t *testing.T) {
-	response := &Response{Body: &responseMockup{Msg: "test"}, Code: http.StatusOK}
-	expectedResponse, err := xml.Marshal(response.Body)
-	expectedCode := response.Code
+	response := &responderMockup{msg: "test", code: http.StatusOK}
+	expectedResponse, err := xml.Marshal(response.Body())
+	expectedCode := response.Status()
 
 	if err != nil {
 		t.Errorf("%v\n", err)
@@ -80,7 +80,7 @@ func TestHandlerXMLResponse(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 		return response, nil
 	})
 	h.MarshallerFunc = xml.Marshal
@@ -110,7 +110,7 @@ func TestHandlerXMLResponseWithError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 		return nil, responseErr
 	})
 	h.MarshallerFunc = xml.Marshal
@@ -133,7 +133,7 @@ func TestHandlerWithoutResponse(t *testing.T) {
 	expectedCode := http.StatusNotFound
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
 		return nil, nil
 	})
 
@@ -150,8 +150,8 @@ func TestHandlerNoContent(t *testing.T) {
 	expectedCode := http.StatusNoContent
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (*Response, error) {
-		return &Response{Code: http.StatusNoContent}, nil
+	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
+		return &responderMockup{msg: "test", code: http.StatusNoContent}, nil
 	})
 
 	h.ServeHTTP(w, r)

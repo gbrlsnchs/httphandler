@@ -6,7 +6,7 @@ import (
 )
 
 // HandlerFunc is the accepted function to use in a Handler.
-type HandlerFunc func(w http.ResponseWriter, r *http.Request) (*Response, error)
+type HandlerFunc func(w http.ResponseWriter, r *http.Request) (Responder, error)
 
 // LoggerFunc is a function that logs an error in a request.
 // Since its goal is only debugging errors, it runs in a different goroutine
@@ -78,7 +78,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.HandlerFunc(w, r)
+	res, err := h.HandlerFunc(w, r)
 
 	w.Header().Set("Content-Type", h.ContentType)
 
@@ -99,13 +99,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if response == nil {
+	if res == nil {
 		http.NotFound(w, r)
 
 		return
 	}
 
-	err = h.write(w, response.Body, response.Code)
+	err = h.write(w, res.Body(), res.Status())
 
 	if err != nil {
 		go h.logError(r, err)
