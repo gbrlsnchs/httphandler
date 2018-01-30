@@ -20,6 +20,10 @@ type ErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
 // to be written by a response writer.
 type MarshallerFunc func(v interface{}) ([]byte, error)
 
+// RuntimeErrorFunc is a function used to return an
+// Error interface which will be sent as response.
+type RuntimeErrorFunc func(r http.Request) Error
+
 var (
 	// DefaultContentType is the default Content-Type MIME
 	// type a Handler uses when it is created.
@@ -40,6 +44,10 @@ var (
 	// DefaultErrCode is the status used by a Handler
 	// when it is created for setting a status code when an error occurs.
 	DefaultErrCode int
+	// DefaultRuntimeErrorFunc is the default function for
+	// retrieving an Error interface that will be sent by
+	// a Handler if a runtime error is caught.
+	DefaultRuntimeErrorFunc RuntimeErrorFunc
 )
 
 // Handler is an HTTP handler that implements http.Handler.
@@ -51,6 +59,7 @@ type Handler struct {
 	MarshallerFunc   MarshallerFunc
 	ErrMsg           string
 	ErrCode          int
+	RuntimeErrorFunc RuntimeErrorFunc
 }
 
 // New creates a new Handler with default settings.
@@ -63,6 +72,7 @@ func New(hfunc HandlerFunc) *Handler {
 		MarshallerFunc:   DefaultMarshallerFunc,
 		ErrCode:          DefaultErrCode,
 		ErrMsg:           DefaultErrMsg,
+		RuntimeErrorFunc: DefaultRuntimeErrorFunc,
 	}
 }
 
@@ -87,9 +97,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch e := err.(type) {
 		case Error:
-			err = h.write(w, e, e.Status())
-
-			if err != nil {
+			if err = h.write(w, e, e.Status()); err != nil {
 				h.handleError(w, r, err)
 			}
 		default:
@@ -100,22 +108,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if res == nil {
-		http.NotFound(w, r)
-
 		return
 	}
 
 	err = h.write(w, res.Body(), res.Status())
 
 	if err != nil {
-		h.logError(r, err)
 		h.handleError(w, r, err)
 	}
 }
 
 func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
-	if h.ErrorHandlerFunc != nil {
-		h.ErrorHandlerFunc(w, r, err)
+	if h.RuntimeErrorFunc != nil {
+		runtimeErr := h.RuntimeErrorFunc(*r)
+
+		if err = h.write(w, runtimeErr, runtimeErr.Status()); err != nil {
+			h.logError(r, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
