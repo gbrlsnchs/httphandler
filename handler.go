@@ -114,6 +114,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = h.write(w, res.Body(), res.Status())
 
 	if err != nil {
+		h.logError(r, err)
 		h.handleError(w, r, err)
 	}
 }
