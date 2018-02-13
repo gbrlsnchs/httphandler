@@ -125,7 +125,10 @@ func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error)
 
 		if err = h.write(w, runtimeErr, runtimeErr.Status()); err != nil {
 			h.logError(r, err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			if h.ErrorHandlerFunc != nil {
+				h.ErrorHandlerFunc(w, r, err)
+			}
 		}
 	}
 }
