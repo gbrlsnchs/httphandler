@@ -129,23 +129,6 @@ func TestHandlerXMLResponseWithError(t *testing.T) {
 	}
 }
 
-func TestHandlerWithoutResponse(t *testing.T) {
-	expectedCode := http.StatusNotFound
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return nil, nil
-	})
-
-	h.ServeHTTP(w, r)
-
-	code := w.Code
-
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
-	}
-}
-
 func TestHandlerNoContent(t *testing.T) {
 	expectedCode := http.StatusNoContent
 	w := httptest.NewRecorder()
