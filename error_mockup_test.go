@@ -8,6 +8,10 @@ type errorMockup struct {
 	Code    int      `json:"code" xml:"code"`
 }
 
+func (e *errorMockup) Body() interface{} {
+	return e
+}
+
 func (e *errorMockup) Error() string {
 	return e.Msg
 }

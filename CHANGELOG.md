@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Runtime error handler.
 
+### Changed
+- `Error` now implements both `error` and `Responder`.
+
 ## [0.6.0] - 2018-01-29
 ### Changed
 - `LoggerFunc` is now `ErrorLoggerFunc`.

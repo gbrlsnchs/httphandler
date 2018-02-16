@@ -97,7 +97,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch e := err.(type) {
 		case Error:
-			if err = h.write(w, e, e.Status()); err != nil {
+			if err = h.write(w, e.Body(), e.Status()); err != nil {
 				h.handleError(w, r, err)
 			}
 		default:
