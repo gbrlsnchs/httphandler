@@ -23,6 +23,9 @@ var (
 	// DefaultErrorHandlerFunc is the default function for
 	// handling runtime errors.
 	DefaultErrorHandlerFunc ErrorHandlerFunc
+	// DefaultCustomErrorHandlerFunc is the default function for
+	// handling custom errors returned by a Handler.
+	DefaultCustomErrorHandlerFunc ErrorHandlerFunc
 	// DefaultMarshallerFunc is the default marshalling function
 	// used by a Handler when it is created.
 	DefaultMarshallerFunc = json.Marshal
@@ -40,23 +43,25 @@ var (
 
 // Handler is an HTTP handler that implements http.Handler.
 type Handler struct {
-	HandlerFunc      HandlerFunc
-	ErrorHandlerFunc ErrorHandlerFunc
-	MarshallerFunc   MarshallerFunc
-	ErrMsg           string
-	ErrCode          int
-	RuntimeErrorFunc RuntimeErrorFunc
+	HandlerFunc            HandlerFunc
+	ErrorHandlerFunc       ErrorHandlerFunc
+	CustomErrorHandlerFunc ErrorHandlerFunc
+	MarshallerFunc         MarshallerFunc
+	ErrMsg                 string
+	ErrCode                int
+	RuntimeErrorFunc       RuntimeErrorFunc
 }
 
 // New creates a new Handler with default settings.
 func New(hfunc HandlerFunc) *Handler {
 	return &Handler{
-		HandlerFunc:      hfunc,
-		ErrorHandlerFunc: DefaultErrorHandlerFunc,
-		MarshallerFunc:   DefaultMarshallerFunc,
-		ErrCode:          DefaultErrCode,
-		ErrMsg:           DefaultErrMsg,
-		RuntimeErrorFunc: DefaultRuntimeErrorFunc,
+		HandlerFunc:            hfunc,
+		ErrorHandlerFunc:       DefaultErrorHandlerFunc,
+		CustomErrorHandlerFunc: DefaultCustomErrorHandlerFunc,
+		MarshallerFunc:         DefaultMarshallerFunc,
+		ErrCode:                DefaultErrCode,
+		ErrMsg:                 DefaultErrMsg,
+		RuntimeErrorFunc:       DefaultRuntimeErrorFunc,
 	}
 }
 
@@ -75,6 +80,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	res, err := h.HandlerFunc(w, r)
 
 	if err != nil {
+		if h.CustomErrorHandlerFunc != nil {
+			h.CustomErrorHandlerFunc(w, r, err)
+		}
+
 		switch e := err.(type) {
 		case Error:
 			if err = h.write(w, e.Body(), e.Status()); err != nil {

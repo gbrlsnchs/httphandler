@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Runtime error handler.
 - `internal` package with dummy data.
+- Custom error handling support.
 
 ### Changed
 - Refactored tests.
