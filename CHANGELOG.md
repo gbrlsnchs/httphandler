@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `internal` package with dummy data.
 
 ### Changed
-- Refeactored tests.
+- Refactored tests.
+- `RuntimeErrorFunc` now accepts an `error` object as parameter.
 
 ### Removed
 - Logger function support.

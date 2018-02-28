@@ -17,7 +17,7 @@ type MarshallerFunc func(v interface{}) ([]byte, error)
 
 // RuntimeErrorFunc is a function used to return an
 // Error interface which will be sent as response.
-type RuntimeErrorFunc func(r *http.Request) Error
+type RuntimeErrorFunc func(r *http.Request, err error) Error
 
 var (
 	// DefaultContentType is the default Content-Type MIME
@@ -107,7 +107,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
 	if h.RuntimeErrorFunc != nil {
-		runtimeErr := h.RuntimeErrorFunc(r)
+		runtimeErr := h.RuntimeErrorFunc(r, err)
 
 		if err = h.write(w, runtimeErr, runtimeErr.Status()); err != nil {
 			if h.ErrorHandlerFunc != nil {
