@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gbrlsnchs/httphandler"
+	"github.com/gbrlsnchs/httphandler/internal"
 )
 
 func Example() {
@@ -12,15 +13,16 @@ func Example() {
 		err := errors.New("Example error")
 
 		if err != nil {
-			return nil, &errorMockup{
-				Msg:  err.Error(),
+			return nil, &internal.DummyResponse{
+				Data: internal.DummyError,
 				Code: http.StatusBadRequest,
+				Err:  err.Error(),
 			}
 		}
 
-		return &responderMockup{
-			msg:  "Hello, World!",
-			code: http.StatusOK,
+		return &internal.DummyResponse{
+			Data: internal.DummyData,
+			Code: http.StatusOK,
 		}, nil
 	})
 

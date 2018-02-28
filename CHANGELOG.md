@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Runtime error handler.
+- `internal` package with dummy data.
+
+### Changed
+- Refeactored tests.
 
 ### Removed
 - Logger function support.
+- Mock-up test files.
 
 ### Changed
 - `Error` now implements both `error` and `Responder`.

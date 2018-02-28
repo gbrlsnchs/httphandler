@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	. "github.com/gbrlsnchs/httphandler"
+	. "github.com/gbrlsnchs/httphandler/internal"
 )
 
 func Benchmark(b *testing.B) {
+	response := &DummyResponse{Data: DummyData, Code: http.StatusOK}
 	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return &responderMockup{msg: "test", code: http.StatusOK}, nil
+		return response, nil
 	})
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)

@@ -9,139 +9,81 @@ import (
 	"testing"
 
 	. "github.com/gbrlsnchs/httphandler"
+	. "github.com/gbrlsnchs/httphandler/internal"
 )
 
-func TestHandlerJSONResponse(t *testing.T) {
-	response := &responderMockup{msg: "test", code: http.StatusOK}
-	expectedResponse, err := json.Marshal(response.Body())
-	expectedCode := response.Status()
-
-	if err != nil {
-		t.Errorf("%v\n", err)
+func TestHandler(t *testing.T) {
+	tt := []struct {
+		code           int
+		marshallerFunc MarshallerFunc
+		isErr          bool
+	}{
+		{
+			code:           http.StatusOK,
+			marshallerFunc: json.Marshal,
+		},
+		{
+			code:           http.StatusBadRequest,
+			marshallerFunc: json.Marshal,
+			isErr:          true,
+		},
+		{
+			code:           http.StatusOK,
+			marshallerFunc: xml.Marshal,
+		},
+		{
+			code:           http.StatusBadRequest,
+			marshallerFunc: xml.Marshal,
+			isErr:          true,
+		},
+		{
+			code:           http.StatusNoContent,
+			marshallerFunc: json.Marshal,
+		},
+		{
+			code:           http.StatusNoContent,
+			marshallerFunc: xml.Marshal,
+		},
 	}
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return response, nil
-	})
+	for i := range tt {
+		test := tt[i]
+		response := &DummyResponse{}
 
-	h.ServeHTTP(w, r)
+		if test.isErr {
+			response.Data = DummyError
+		} else {
+			response.Data = DummyData
+		}
 
-	body := w.Body.Bytes()
-	code := w.Code
+		expected, err := test.marshallerFunc(response.Data)
 
-	if !bytes.Equal(expectedResponse, body) {
-		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
-	}
+		if want, got := (error)(nil), err; want != got {
+			t.Errorf("want %v, got %v\n", want, got)
+		}
 
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
-	}
-}
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
+			if test.isErr {
+				return nil, response
+			}
 
-func TestHandlerJSONResponseWithError(t *testing.T) {
-	responseErr := &errorMockup{Msg: "Oops!", Code: http.StatusBadRequest}
-	expectedResponse, err := json.Marshal(responseErr)
-	expectedCode := responseErr.Code
+			return response, nil
+		})
+		h.MarshallerFunc = test.marshallerFunc
 
-	if err != nil {
-		t.Errorf("%v\n", err)
-	}
+		h.ServeHTTP(w, r)
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return nil, responseErr
-	})
+		body := w.Body.Bytes()
+		code := w.Code
 
-	h.ServeHTTP(w, r)
+		if want, got := expected, body; !bytes.Equal(want, got) {
+			t.Errorf("want %s, got %s\n", string(want), string(got))
+		}
 
-	body := w.Body.Bytes()
-	code := w.Code
-
-	if !bytes.Equal(expectedResponse, body) {
-		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
-	}
-
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
-	}
-}
-
-func TestHandlerXMLResponse(t *testing.T) {
-	response := &responderMockup{msg: "test", code: http.StatusOK}
-	expectedResponse, err := xml.Marshal(response.Body())
-	expectedCode := response.Status()
-
-	if err != nil {
-		t.Errorf("%v\n", err)
-	}
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return response, nil
-	})
-	h.MarshallerFunc = xml.Marshal
-
-	h.ServeHTTP(w, r)
-
-	body := w.Body.Bytes()
-	code := w.Code
-
-	if !bytes.Equal(expectedResponse, body) {
-		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
-	}
-
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
-	}
-}
-
-func TestHandlerXMLResponseWithError(t *testing.T) {
-	responseErr := &errorMockup{Msg: "Oops!", Code: http.StatusBadRequest}
-	expectedResponse, err := xml.Marshal(responseErr)
-	expectedCode := responseErr.Code
-
-	if err != nil {
-		t.Errorf("%v\n", err)
-	}
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return nil, responseErr
-	})
-	h.MarshallerFunc = xml.Marshal
-
-	h.ServeHTTP(w, r)
-
-	body := w.Body.Bytes()
-	code := w.Code
-
-	if !bytes.Equal(expectedResponse, body) {
-		t.Errorf("%s is not expected response (%s)\n", string(expectedResponse), string(body))
-	}
-
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
-	}
-}
-
-func TestHandlerNoContent(t *testing.T) {
-	expectedCode := http.StatusNoContent
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	h := New(func(w http.ResponseWriter, r *http.Request) (Responder, error) {
-		return &responderMockup{msg: "test", code: http.StatusNoContent}, nil
-	})
-
-	h.ServeHTTP(w, r)
-
-	code := w.Code
-
-	if expectedCode != code {
-		t.Errorf("%d is not expected status (%d)\n", expectedCode, code)
+		if want, got := response.Code, code; want != code {
+			t.Errorf("want %d, got %d\n", want, got)
+		}
 	}
 }
