@@ -20,9 +20,6 @@ type MarshallerFunc func(v interface{}) ([]byte, error)
 type RuntimeErrorFunc func(r *http.Request, err error) Error
 
 var (
-	// DefaultContentType is the default Content-Type MIME
-	// type a Handler uses when it is created.
-	DefaultContentType = "application/json"
 	// DefaultErrorHandlerFunc is the default function for
 	// handling runtime errors.
 	DefaultErrorHandlerFunc ErrorHandlerFunc
@@ -43,7 +40,6 @@ var (
 
 // Handler is an HTTP handler that implements http.Handler.
 type Handler struct {
-	ContentType      string
 	HandlerFunc      HandlerFunc
 	ErrorHandlerFunc ErrorHandlerFunc
 	MarshallerFunc   MarshallerFunc
@@ -55,7 +51,6 @@ type Handler struct {
 // New creates a new Handler with default settings.
 func New(hfunc HandlerFunc) *Handler {
 	return &Handler{
-		ContentType:      DefaultContentType,
 		HandlerFunc:      hfunc,
 		ErrorHandlerFunc: DefaultErrorHandlerFunc,
 		MarshallerFunc:   DefaultMarshallerFunc,
@@ -78,8 +73,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.HandlerFunc(w, r)
-
-	w.Header().Set("Content-Type", h.ContentType)
 
 	if err != nil {
 		switch e := err.(type) {

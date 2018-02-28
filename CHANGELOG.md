@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 - Logger function support.
 - Mock-up test files.
+- `Handler.ServeHTTP` doesn't set a `Content-Type` header anymore.
 
 ### Changed
 - `Error` now implements both `error` and `Responder`.
