@@ -125,7 +125,7 @@ func (h *Handler) write(w http.ResponseWriter, body interface{}, code int) error
 		err error
 	)
 
-	if h.MarshallerFunc != nil {
+	if body != nil && h.MarshallerFunc != nil {
 		b, err = h.MarshallerFunc(body)
 
 		if err != nil {
