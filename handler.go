@@ -111,7 +111,7 @@ func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error)
 	if h.RuntimeErrorFunc != nil {
 		runtimeErr := h.RuntimeErrorFunc(r, err)
 
-		if err = h.write(w, runtimeErr, runtimeErr.Status()); err != nil {
+		if err = h.write(w, runtimeErr.Body(), runtimeErr.Status()); err != nil {
 			if h.ErrorHandlerFunc != nil {
 				h.ErrorHandlerFunc(w, r, err)
 			}
